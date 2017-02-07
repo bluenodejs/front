@@ -1,11 +1,21 @@
-const createCanvas = () => d3.select('body').append('div')
-  .classed('canvas', true)
-  .style('top', '5px')
-  .style('left', '5px')
+const createCanvas = () => ({
+  html: d3.select('body').append('div')
+    .classed('canvas', true)
+    .style('top', '5px')
+    .style('left', '5px'),
+  svg: d3.select('.canvas').append('svg')
+    .style('x', 5)
+    .style('y', 5)
+})
 
-const updateCanvasSize = canvas => canvas
-  .style('height', `${document.documentElement.clientHeight - 10}px`)
-  .style('width', `${document.documentElement.clientWidth - 10}px`)
+const updateCanvasSize = ({ html, svg }) => (
+  html
+    .style('height', `${document.documentElement.clientHeight - 10}px`)
+    .style('width', `${document.documentElement.clientWidth - 10}px`),
+  svg
+    .style('height', `${document.documentElement.clientHeight - 10}px`)
+    .style('width', `${document.documentElement.clientWidth - 10}px`)
+)
 
 /**
  * @param panel {d3}
@@ -92,9 +102,12 @@ const canvas = createCanvas()
 updateCanvasSize(canvas)
 window.addEventListener('resize', () => updateCanvasSize(canvas))
 
-const node = addNode(canvas, {
+const node = addNode(canvas.html, {
   name: 'Horizontal interactor',
-  position: {},
+  position: {
+    top: 50,
+    left: 600,
+  },
   inputs: [{
     name: 'initial_value',
     text: 'Initial value',
@@ -108,10 +121,10 @@ const node = addNode(canvas, {
   }],
 })
 
-const node2 = addNode(canvas, {
+const node2 = addNode(canvas.html, {
   name: 'OnComponentBeginOverlap (Trigger Volume)',
   position: {
-    top: 150,
+    top: 20,
     left: 20
   },
   type: 'event',
@@ -128,11 +141,11 @@ const node2 = addNode(canvas, {
   }],
 })
 
-const node3 = addNode(canvas, {
+const node3 = addNode(canvas.html, {
   name: 'Make Vector',
   position: {
-    top: 20,
-    left: 350
+    top: 200,
+    left: 330
   },
   type: 'expression',
   inputs: [{
@@ -151,7 +164,9 @@ const node3 = addNode(canvas, {
   }],
 })
 
-const node4 = addNode(canvas, {
+/*
+
+const node4 = addNode(canvas.html, {
   name: 'Add Actor Local Offset',
   position: {
     top: 150,
@@ -174,7 +189,7 @@ const node4 = addNode(canvas, {
   }],
 })
 
-const getter = addNode(canvas, {
+const getter = addNode(canvas.html, {
   name: 'Get (Inside Variable)',
   position: {
     top: 280,
@@ -188,7 +203,7 @@ const getter = addNode(canvas, {
   }],
 })
 
-const setter = addNode(canvas, {
+const setter = addNode(canvas.html, {
   name: 'Set (Inside Variable)',
   position: {
     top: 280,
@@ -204,3 +219,5 @@ const setter = addNode(canvas, {
     text: 'Inside Variable',
   }],
 })
+
+*/
