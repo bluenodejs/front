@@ -40,15 +40,18 @@ const createRow = (panel, rowDef, output = false) => {
 }
 
 /**
- * @param node {Object}
+ * @param node {Object}   { node, inputs, outputs, header, definition }
  */
-const onNodeMove = node => () => {
+const onNodeMove = ({ node, outputs }) => () => {
   const {
     top,
     left
   } = d3.event.subject
   const offTop = d3.event.y - top
   const offLeft = d3.event.x - left
+  const offsetOutputs = outputs.map(out => {
+    console.log(out)
+  })
 
   d3.event.on('drag', () => {
     const mTop = d3.event.y - offTop
@@ -79,21 +82,22 @@ const addNode = (canvas, nodeDef) => {
   const right = content.append('div').classed('node-panel panel-right', true)
 
   const inputs = nodeDef.inputs.map(row => createRow(left, row))
-  const outputs = nodeDef.outputs.map(row => createRow(right, row))
-
-  header.call(
-    d3.drag()
-    .subject(() => ({
-      top: parseInt(node.style('top'), 10),
-      left: parseInt(node.style('left'), 10),
-    }))
-    .container(() => canvas.html.node())
-    .filter(() => d3.event.target == header.node())
-    .on('start', onNodeMove(node))
-  )
+  const outputs = nodeDef.outputs.map(row => createRow(right, row, true))
 
   return { node, inputs, outputs, header, definition: nodeDef }
 }
+
+const addMoveHandler = (canvas, node) => 
+  node.header.call(
+    d3.drag()
+    .subject(() => ({
+      top: parseInt(node.node.style('top'), 10),
+      left: parseInt(node.node.style('left'), 10),
+    }))
+    .container(() => canvas.html.node())
+    .filter(() => d3.event.target == node.header.node())
+    .on('start', onNodeMove(node))
+  )
 
 const getCenterOfPoint = point => {
   const { top, left, width, height } = point.node().getBoundingClientRect()
@@ -119,8 +123,6 @@ const LINE_GROW_OFFSET = 20
 const createConnection = (canvas, { from, output, to, input }) => {
   const inlet = to.inputs.filter(put => put.name === input)[0]
   const outlet = from.outputs.filter(put => put.name === output)[0]
-  console.log({ from, output, to, input })
-  console.log({ inlet, outlet })
 
   if (!inlet)
     throw new Error(`Inlet "${input}" not found!`)
@@ -130,7 +132,7 @@ const createConnection = (canvas, { from, output, to, input }) => {
   const centerTo = getCenterOfPoint(inlet.point)
   const centerFrom = getCenterOfPoint(outlet.point)
 
-  const connection = canvas.svg.append('path')
+  const node = canvas.svg.append('path')
     .attr('d', makeLine([
       centerFrom,
       { top: centerFrom.top, left: centerFrom.left + LINE_GROW_OFFSET },
@@ -138,7 +140,100 @@ const createConnection = (canvas, { from, output, to, input }) => {
       centerTo,
     ]))
   
-  return { connection, inlet, outlet }
+  const connection = { node, inlet, outlet, pointFrom: centerFrom, pointTo: centerTo }
+  inlet.connection = connection
+  outlet.connection = connection
+
+  return connection
+}
+
+const createId = i =>
+  ((i * 1e14 + Date.now()) * Math.pow(36, 10)).toString(36)
+
+
+class Registry {
+  constructor(canvas) {
+    this.canvas = canvas
+    this.nodes = new Map()
+    this.connections = new Map()
+    this.lastId = 0
+  }
+
+  addNode(scheme) {
+    const id = createId(++this.lastId)
+
+    const node = addNode(this.canvas, scheme)
+    node.id = id
+    node.connections = new Set()
+
+    this.nodes.set(id, node)
+    return node
+  }
+
+  getNode(id) {
+    return this.nodes.get(id)
+  }
+
+
+  dropNode(id) {
+    const node = this.nodes.get(id)
+
+    for (const cId of node.connections) {
+      this.disconnect(cId)
+    }
+
+    this.nodes.delete(id)
+
+    return { node, connections }
+  }
+
+  /**
+   * @param from {String}     id of node
+   * @param to {String}       id of node
+   */
+  disconnect(connectionId) {
+    const connection = this.connections.get(connectionId)
+    const fromNode = this.nodes.get(connection.from)
+    const toNode = this.nodes.get(connection.to)
+
+    fromNode.connections.delete(connectionId)
+    fromNode.connections.delete(connectionId)
+
+    // delete node in svg
+    // connection.native.node.delete()
+
+    this.nodes.set(connection.from, fromNode)
+    this.nodes.set(connection.to, toNode)
+    this.connections.delete(connectionId)
+  }
+
+  /**
+   * @param from {String}     id of node
+   * @param to {String}       id of node
+   * @param output {String}   name of output
+   * @param input {String}    name of input
+   */
+  connect({ from, output, to, input }) {
+    const fromNode = this.nodes.get(from)
+    const toNode = this.nodes.get(to)
+    const id = createId(++this.lastId)
+
+    const native = createConnection(
+      this.canvas,
+      { from: fromNode, output, to: toNode, input }
+    )
+    
+    const connection = { id, native, from, output, to, input }
+
+    fromNode.connections.add(id)
+    toNode.connections.add(id)
+
+    this.connections.set(id, connection)
+    this.nodes.set(from, fromNode)
+    this.nodes.set(to, toNode)
+
+    return connection
+  }
 }
 
 // =======================================================================================
@@ -147,7 +242,9 @@ const canvas = createCanvas()
 updateCanvasSize(canvas)
 window.addEventListener('resize', () => updateCanvasSize(canvas))
 
-const node = addNode(canvas, {
+const registry = new Registry(canvas)
+
+const node = registry.addNode({
   name: 'Horizontal interactor',
   position: {
     top: 50,
@@ -167,7 +264,7 @@ const node = addNode(canvas, {
   }],
 })
 
-const node2 = addNode(canvas, {
+const node2 = registry.addNode({
   name: 'OnComponentBeginOverlap (Trigger Volume)',
   position: {
     top: 20,
@@ -187,7 +284,7 @@ const node2 = addNode(canvas, {
   }],
 })
 
-const node3 = addNode(canvas, {
+const node3 = registry.addNode({
   name: 'Make Vector',
   position: {
     top: 200,
@@ -210,7 +307,7 @@ const node3 = addNode(canvas, {
   }],
 })
 
-const nodeS = addNode(canvas, {
+const nodeS = registry.addNode({
   name: 'Split',
   position: {
     top: 190,
@@ -224,35 +321,37 @@ const nodeS = addNode(canvas, {
 })
 
 
-const conn1 = createConnection(canvas, {
-  from: node2, output: 'other_body_index',
-  to: node3, input: 'x',
+const conn1 = registry.connect({
+  from: node2.id, output: 'other_body_index',
+  to: node3.id, input: 'x',
 })
 
-const conn2 = createConnection(canvas, {
-  from: node3, output: 'return_value',
-  to: node, input: 'contextual_resolver',
+const conn2 = registry.connect({
+  from: node3.id, output: 'return_value',
+  to: node.id, input: 'contextual_resolver',
 })
 
-const conn3 = createConnection(canvas, {
-  from: node2, output: 'other_actor',
-  to: node, input: 'initial_value',
+const conn3 = registry.connect({
+  from: node2.id, output: 'other_actor',
+  to: node.id, input: 'initial_value',
 })
 
-const conn4 = createConnection(canvas, {
-  from: node2, output: 'other_comp',
-  to: nodeS, input: 'input',
+const conn4 = registry.connect({
+  from: node2.id, output: 'other_comp',
+  to: nodeS.id, input: 'input',
 })
 
-const conn5 = createConnection(canvas, {
-  from: nodeS, output: 'first',
-  to: node3, input: 'z',
+const conn5 = registry.connect({
+  from: nodeS.id, output: 'first',
+  to: node3.id, input: 'z',
 })
 
-const conn6 = createConnection(canvas, {
-  from: nodeS, output: 'second',
-  to: node3, input: 'y',
+const conn6 = registry.connect({
+  from: nodeS.id, output: 'second',
+  to: node3.id, input: 'y',
 })
+
+console.log(node)
 
 /*
 
