@@ -90,8 +90,6 @@ const onNodeMove = (registry, nodeId) => () => {
         pointTo,
       }
     })
-  
-  console.log('offsets', offsets)
 
   d3.event.on('drag', () => {
     const mTop = d3.event.y - offTop
@@ -303,114 +301,158 @@ window.addEventListener('resize', () => updateCanvasSize(canvas))
 
 const registry = new Registry(canvas)
 
-const node = registry.addNode({
-  name: 'Horizontal interactor',
-  position: {
-    top: 50,
-    left: 600,
-  },
-  type: 'function',
-  inputs: [{
-    name: 'initial_value',
-    text: 'Initial value',
-  }, {
-    name: 'contextual_resolver',
-    text: 'Contextual resolver',
-  }],
-  outputs: [{
-    name: 'splitted_value',
-    text: 'Splitted value',
-  }],
-})
+const example_manyNodes = () => {
+  const node = registry.addNode({
+    name: 'Horizontal interactor',
+    position: {
+      top: 50,
+      left: 600,
+    },
+    type: 'function',
+    inputs: [{
+      name: 'initial_value',
+      text: 'Initial value',
+    }, {
+      name: 'contextual_resolver',
+      text: 'Contextual resolver',
+    }],
+    outputs: [{
+      name: 'splitted_value',
+      text: 'Splitted value',
+    }],
+  })
 
-const node2 = registry.addNode({
-  name: 'OnComponentBeginOverlap (Trigger Volume)',
-  position: {
-    top: 20,
-    left: 20
-  },
-  type: 'event',
-  inputs: [],
-  outputs: [{
-    name: 'other_actor',
-    text: 'Other Actor',
-  }, {
-    name: 'other_comp',
-    text: 'Other Comp',
-  }, {
-    name: 'other_body_index',
-    text: 'Other Body Index',
-  }],
-})
+  const node2 = registry.addNode({
+    name: 'OnComponentBeginOverlap (Trigger Volume)',
+    position: {
+      top: 20,
+      left: 20
+    },
+    type: 'event',
+    inputs: [],
+    outputs: [{
+      name: 'other_actor',
+      text: 'Other Actor',
+    }, {
+      name: 'other_comp',
+      text: 'Other Comp',
+    }, {
+      name: 'other_body_index',
+      text: 'Other Body Index',
+    }],
+  })
 
-const node3 = registry.addNode({
-  name: 'Make Vector',
-  position: {
-    top: 200,
-    left: 330
-  },
-  type: 'expression',
-  inputs: [{
-    name: 'x',
-    text: 'X',
-  }, {
-    name: 'y',
-    text: 'Y',
-  }, {
-    name: 'z',
-    text: 'Z',
-  }],
-  outputs: [{
-    name: 'return_value',
-    text: 'Return Value',
-  }],
-})
+  const node3 = registry.addNode({
+    name: 'Make Vector',
+    position: {
+      top: 200,
+      left: 330
+    },
+    type: 'expression',
+    inputs: [{
+      name: 'x',
+      text: 'X',
+    }, {
+      name: 'y',
+      text: 'Y',
+    }, {
+      name: 'z',
+      text: 'Z',
+    }],
+    outputs: [{
+      name: 'return_value',
+      text: 'Return Value',
+    }],
+  })
 
-const nodeS = registry.addNode({
-  name: 'Split',
-  position: {
-    top: 190,
-    left: 50,
-  },
-  inputs: [{ name: 'input', text: 'Input' }],
-  outputs: [
-    { name: 'first', text: 'First Index' },
-    { name: 'second', text: 'Second Index' },
-  ]
-})
+  const nodeS = registry.addNode({
+    name: 'Split',
+    position: {
+      top: 190,
+      left: 50,
+    },
+    inputs: [{ name: 'input', text: 'Input' }],
+    outputs: [
+      { name: 'first', text: 'First Index' },
+      { name: 'second', text: 'Second Index' },
+    ]
+  })
 
 
-const conn1 = registry.connect({
-  from: node2.id, output: 'other_body_index',
-  to: node3.id, input: 'x',
-})
+  const conn1 = registry.connect({
+    from: node2.id, output: 'other_body_index',
+    to: node3.id, input: 'x',
+  })
 
-const conn2 = registry.connect({
-  from: node3.id, output: 'return_value',
-  to: node.id, input: 'contextual_resolver',
-})
+  const conn2 = registry.connect({
+    from: node3.id, output: 'return_value',
+    to: node.id, input: 'contextual_resolver',
+  })
 
-const conn3 = registry.connect({
-  from: node2.id, output: 'other_actor',
-  to: node.id, input: 'initial_value',
-})
+  const conn3 = registry.connect({
+    from: node2.id, output: 'other_actor',
+    to: node.id, input: 'initial_value',
+  })
 
-const conn4 = registry.connect({
-  from: node2.id, output: 'other_comp',
-  to: nodeS.id, input: 'input',
-})
+  const conn4 = registry.connect({
+    from: node2.id, output: 'other_comp',
+    to: nodeS.id, input: 'input',
+  })
 
-const conn5 = registry.connect({
-  from: nodeS.id, output: 'first',
-  to: node3.id, input: 'z',
-})
+  const conn5 = registry.connect({
+    from: nodeS.id, output: 'first',
+    to: node3.id, input: 'z',
+  })
 
-const conn6 = registry.connect({
-  from: nodeS.id, output: 'second',
-  to: node3.id, input: 'y',
-})
+  const conn6 = registry.connect({
+    from: nodeS.id, output: 'second',
+    to: node3.id, input: 'y',
+  })
+}
 
-console.log(node)
+
+const example_arrayPush = () => {
+  const AddToArray = registry.addNode({ name: 'Add To Array', position: {top:20, left:500}, type: 'function', inputs: [{text:'Target Array', name:'array'}, { text: '[0]: 3', name: '0' }], outputs: [] })
+  const DefineArray = registry.addNode({ name: 'Define Array', position: { top: 20, left: 20 }, type: 'expression', inputs: [{ text: '[0]: 1', name: '0' }, { text: '[1]: 2', name: '1' }], outputs: [{ name: 'array', text: 'Array' }] })
+  const SetVarArray = registry.addNode({ name: 'Set (My Array)', position: {top:65, left:240}, type: 'setter', inputs: [{ text: 'My Array', name: 'new_value' }], outputs: [{ text: 'My Array', name: 'value' }] })
+
+  registry.connect({ from: DefineArray.id, output: 'array', to: SetVarArray.id, input: 'new_value'})
+  registry.connect({ from: SetVarArray.id, output: 'value', to: AddToArray.id, input: 'array'})
+}
+
+const example_setter_getter = () => {
+  const getv = registry.addNode({
+    name: 'Get (Inside Variable)',
+    position: {
+      top: 280,
+      left: 20
+    },
+    type: 'getter',
+    inputs: [],
+    outputs: [{
+      name: 'value',
+      text: 'Inside Variable'
+    }],
+  })
+
+  const setv = registry.addNode({
+    name: 'Set (Inside Variable)',
+    position: {
+      top: 280,
+      left: 200
+    },
+    type: 'setter',
+    inputs: [{
+      name: 'new_value',
+      text: 'New value',
+    }],
+    outputs: [{
+      name: 'value',
+      text: 'Inside Variable',
+    }],
+  })
+}
+
 
 /*
 
