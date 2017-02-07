@@ -79,9 +79,10 @@ const onNodeMove = (registry, nodeId) => () => {
   
   const offsets = Array.from(node.connections)
     .map(id => registry.getConnection(id))
-    .map(({ native: { pointFrom, pointTo, node }, to, from }) => {
-      console.log(node)
+    .map(def => {
+      const { native: { pointFrom, pointTo, node }, to, from } = def
       return {
+        def,
         node,
         from: { id: from, offtop: pointFrom.top - top, offleft: pointFrom.left - left },
         to: { id: to, offtop: pointTo.top - top, offleft: pointTo.left - left },
@@ -98,7 +99,9 @@ const onNodeMove = (registry, nodeId) => () => {
 
     node.node.style('top', `${mTop}px`).style('left', `${mLeft}px`)
 
-    offsets.forEach(({ node, from, to, pointFrom, pointTo }) => {
+    offsets.map(def => {
+      const { node, from, to, pointFrom, pointTo } = def
+
       if (to.id === nodeId) {
         node.attr('d', makeLine([
           pointFrom,
@@ -106,15 +109,29 @@ const onNodeMove = (registry, nodeId) => () => {
           { top: mTop + to.offtop, left: mLeft + to.offleft - LINE_GROW_OFFSET },
           { top: mTop + to.offtop, left: mLeft + to.offleft },
         ]))
+
+        def.def.native.pointTo.top = mTop + to.offtop
+        def.def.native.pointTo.left = mLeft + to.offleft
+        return def
       }
-      else if (from.id === nodeId) {
+      
+      if (from.id === nodeId) {
         node.attr('d', makeLine([
           { top: mTop + from.offtop, left: mLeft + from.offleft },
           { top: mTop + from.offtop, left: mLeft + from.offleft + LINE_GROW_OFFSET },
           { top: pointTo.top, left: pointTo.left - LINE_GROW_OFFSET },
           pointTo,
         ]))
+
+        def.def.native.pointFrom.top = mTop + from.offtop
+        def.def.native.pointFrom.left = mLeft + from.offleft
       }
+    })
+  })
+
+  d3.event.on('end', () => {
+    offsets.forEach(ee => {
+      registry.setConnection(ee.def.id, ee.def)
     })
   })
 }
@@ -271,6 +288,10 @@ class Registry {
 
   getConnection(id) {
     return this.connections.get(id)
+  }
+
+  setConnection(id, connection) {
+    this.connections.set(id, connection)
   }
 }
 
