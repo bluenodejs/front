@@ -36,29 +36,7 @@ const createRow = (panel, rowDef, output = false) => {
   const point = row.append('div')
     .classed('node-row-point', true)
 
-  return { row, text, point, name: rowDef.name }
-}
-
-/**
- * @param node {Object}   { node, inputs, outputs, header, definition }
- */
-const onNodeMove = ({ node, outputs }) => () => {
-  const {
-    top,
-    left
-  } = d3.event.subject
-  const offTop = d3.event.y - top
-  const offLeft = d3.event.x - left
-  const offsetOutputs = outputs.map(out => {
-    console.log(out)
-  })
-
-  d3.event.on('drag', () => {
-    const mTop = d3.event.y - offTop
-    const mLeft = d3.event.x - offLeft
-
-    node.style('top', `${mTop}px`).style('left', `${mLeft}px`)
-  })
+  return { row, text, point, name: rowDef.name, def: rowDef }
 }
 
 /**
@@ -87,7 +65,78 @@ const addNode = (canvas, nodeDef) => {
   return { node, inputs, outputs, header, definition: nodeDef }
 }
 
-const addMoveHandler = (canvas, node) => 
+/**
+ * @param nodeId {String}    id from registry
+ */
+const onNodeMove = (registry, nodeId) => () => {
+  const node = registry.getNode(nodeId)
+  const {
+    top,
+    left
+  } = d3.event.subject
+  const offTop = d3.event.y - top
+  const offLeft = d3.event.x - left
+  
+  const offsets = Array.from(node.connections)
+    .map(id => registry.getConnection(id))
+    .map(def => {
+      const { native: { pointFrom, pointTo, node }, to, from } = def
+      return {
+        def,
+        node,
+        from: { id: from, offtop: pointFrom.top - top, offleft: pointFrom.left - left },
+        to: { id: to, offtop: pointTo.top - top, offleft: pointTo.left - left },
+        pointFrom,
+        pointTo,
+      }
+    })
+  
+  console.log('offsets', offsets)
+
+  d3.event.on('drag', () => {
+    const mTop = d3.event.y - offTop
+    const mLeft = d3.event.x - offLeft
+
+    node.node.style('top', `${mTop}px`).style('left', `${mLeft}px`)
+
+    offsets.map(def => {
+      const { node, from, to, pointFrom, pointTo } = def
+
+      if (to.id === nodeId) {
+        node.attr('d', makeLine([
+          pointFrom,
+          { top: pointFrom.top, left: pointFrom.left + LINE_GROW_OFFSET },
+          { top: mTop + to.offtop, left: mLeft + to.offleft - LINE_GROW_OFFSET },
+          { top: mTop + to.offtop, left: mLeft + to.offleft },
+        ]))
+
+        def.def.native.pointTo.top = mTop + to.offtop
+        def.def.native.pointTo.left = mLeft + to.offleft
+        return def
+      }
+      
+      if (from.id === nodeId) {
+        node.attr('d', makeLine([
+          { top: mTop + from.offtop, left: mLeft + from.offleft },
+          { top: mTop + from.offtop, left: mLeft + from.offleft + LINE_GROW_OFFSET },
+          { top: pointTo.top, left: pointTo.left - LINE_GROW_OFFSET },
+          pointTo,
+        ]))
+
+        def.def.native.pointFrom.top = mTop + from.offtop
+        def.def.native.pointFrom.left = mLeft + from.offleft
+      }
+    })
+  })
+
+  d3.event.on('end', () => {
+    offsets.forEach(ee => {
+      registry.setConnection(ee.def.id, ee.def)
+    })
+  })
+}
+
+const addMoveHandler = (canvas, registry, node) => 
   node.header.call(
     d3.drag()
     .subject(() => ({
@@ -96,7 +145,7 @@ const addMoveHandler = (canvas, node) =>
     }))
     .container(() => canvas.html.node())
     .filter(() => d3.event.target == node.header.node())
-    .on('start', onNodeMove(node))
+    .on('start', onNodeMove(registry, node.id))
   )
 
 const getCenterOfPoint = point => {
@@ -166,6 +215,8 @@ class Registry {
     node.id = id
     node.connections = new Set()
 
+    addMoveHandler(this.canvas, this, node)
+
     this.nodes.set(id, node)
     return node
   }
@@ -233,6 +284,14 @@ class Registry {
     this.nodes.set(to, toNode)
 
     return connection
+  }
+
+  getConnection(id) {
+    return this.connections.get(id)
+  }
+
+  setConnection(id, connection) {
+    this.connections.set(id, connection)
   }
 }
 
