@@ -1,0 +1,137 @@
+.canvas {
+  background-color: lightgray;
+  position: absolute;
+  font-family: 'Ubuntu';
+  overflow: hidden;
+}
+
+.node {
+  display: inline-flex;
+  flex-flow: column nowrap;
+  border: 1px solid grey;
+  background-color: white;
+  border-radius: 5px;
+  position: relative;
+  //n-width: 200px;
+  position: absolute;
+  user-select: none;
+  box-shadow: 0 3px 10px -2px rgba(0,0,0,.3);  
+  
+  &-header {
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: center;
+    align-items: center;
+    background-color: grey;
+    color: white;
+    padding: 0 10px;
+    font-size: 14px;
+    height: 26px;
+    user-select: none;
+    cursor: default;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+  }
+  
+  &-content {
+    display: flex;
+    flex-flow: row nowrap;
+  }
+  
+  &-panel {
+    display: flex;
+    flex-grow: 1;
+    flex-flow: column nowrap;
+    margin: 0 10px;
+    font-size: 13px;
+    
+    .node-row {
+      display: flex;
+      height: 20px;
+      flex-flow: row-nowrap;
+      align-items: center;
+      user-select: none;
+      cursor: default;
+      
+      &-point {
+        width: 10px;
+        height: 10px;
+        background-color: transparent;
+        border: 1px solid black;
+        border-radius: 50%;
+        box-sizing: border-box;
+        box-shadow: none;
+        transition: box-shadow .3s;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        
+        &::before {
+          content: '';
+          width: 0;
+          height: 0;
+          border: 4px solid transparent;
+          border-left-width: 3px;
+          border-right: 0;
+          border-left-color: rgba(0,0,0,.9);
+          margin-right: -3px;
+        }
+        
+        &:hover {
+          box-shadow: 0 0 6px rgba(0,0,0,.5), inset 0 0 6px rgba(0,0,0,.5);
+        }
+        
+        &.active {
+          background-color: red;
+        }
+      }
+    }
+    
+    &.panel-left .node-row {
+      justify-content: flex-start;
+      
+      .node-row-point {
+        order: -1;
+        margin-right: 10px;
+      }
+    }
+    
+    &.panel-right .node-row {
+      justify-content: flex-end;
+      
+      .node-row-point {
+        margin-left: 10px;
+      }
+    }
+  }
+}
+
+.node {
+  &.class-event {
+    border-color: rgb(200,0,0);
+    .node-header {
+      background-color: rgb(200,0,0);
+      justify-content: flex-start;
+    }
+  }
+  
+  &.class-expression {
+    border-color: rgb(30,100,30);
+    .node-header {
+      background-color: rgb(30,100,30);
+      justify-content: flex-start;
+    }
+  }
+  
+  &.class-function {
+    border-color: rgb(30,30,100);
+    .node-header {
+      background-color: rgb(30,30,100);
+    }
+  }
+  
+  &.class-getter, &.class-setter {
+    background-color: lightgrey;
+  }
+}
