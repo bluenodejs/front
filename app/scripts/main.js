@@ -25,7 +25,7 @@ const updateCanvasSize = ({ html, svg }) => (
 const createRow = (panel, rowDef, output = false) => {
   const row = panel.append('div')
     .classed('node-row', true)
-  
+
   output
     ? row.attr('data-output', rowDef.name)
     : row.attr('data-input', rowDef.name)
@@ -76,7 +76,7 @@ const onNodeMove = (registry, nodeId) => () => {
   } = d3.event.subject
   const offTop = d3.event.y - top
   const offLeft = d3.event.x - left
-  
+
   const offsets = Array.from(node.connections)
     .map(id => registry.getConnection(id))
     .map(def => {
@@ -112,7 +112,7 @@ const onNodeMove = (registry, nodeId) => () => {
         def.def.native.pointTo.left = mLeft + to.offleft
         return def
       }
-      
+
       if (from.id === nodeId) {
         node.attr('d', makeLine([
           { top: mTop + from.offtop, left: mLeft + from.offleft },
@@ -134,7 +134,7 @@ const onNodeMove = (registry, nodeId) => () => {
   })
 }
 
-const addMoveHandler = (canvas, registry, node) => 
+const addMoveHandler = (canvas, registry, node) =>
   node.header.call(
     d3.drag()
     .subject(() => ({
@@ -173,7 +173,7 @@ const createConnection = (canvas, { from, output, to, input }) => {
 
   if (!inlet)
     throw new Error(`Inlet "${input}" not found!`)
-  if (!outlet) 
+  if (!outlet)
     throw new Error(`Outlet "${output}" not found!`)
 
   const centerTo = getCenterOfPoint(inlet.point)
@@ -186,7 +186,7 @@ const createConnection = (canvas, { from, output, to, input }) => {
       { top: centerTo.top, left: centerTo.left - LINE_GROW_OFFSET },
       centerTo,
     ]))
-  
+
   const connection = { node, inlet, outlet, pointFrom: centerFrom, pointTo: centerTo }
   inlet.connection = connection
   outlet.connection = connection
@@ -271,7 +271,7 @@ class Registry {
       this.canvas,
       { from: fromNode, output, to: toNode, input }
     )
-    
+
     const connection = { id, native, from, output, to, input }
 
     fromNode.connections.add(id)
@@ -452,7 +452,6 @@ const example_setter_getter = () => {
     }],
   })
 }
-
 
 /*
 
