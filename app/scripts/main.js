@@ -1,12 +1,16 @@
 const createCanvas = () => ({
-  html: d3.select('body').append('div')
+  html: d3
+    .select('body')
+    .append('div')
     .classed('canvas', true)
     .style('top', '0px')
     .style('left', '0px'),
-  svg: d3.select('.canvas').append('svg')
+  svg: d3
+    .select('.canvas')
+    .append('svg')
     .style('x', 0)
     .style('y', 0)
-})
+});
 
 const updateCanvasSize = ({ html, svg }) => (
   html
@@ -15,7 +19,7 @@ const updateCanvasSize = ({ html, svg }) => (
   svg
     .style('height', `${document.documentElement.clientHeight}px`)
     .style('width', `${document.documentElement.clientWidth}px`)
-)
+);
 
 /**
  * @param panel {d3}
@@ -23,21 +27,18 @@ const updateCanvasSize = ({ html, svg }) => (
  * @return {Object}  { row, text, point }
  */
 const createRow = (panel, rowDef, output = false) => {
-  const row = panel.append('div')
-    .classed('node-row', true)
+  const row = panel.append('div').classed('node-row', true);
 
   output
     ? row.attr('data-output', rowDef.name)
-    : row.attr('data-input', rowDef.name)
+    : row.attr('data-input', rowDef.name);
 
-  const text = row.append('span')
-    .text(rowDef.text)
+  const text = row.append('span').text(rowDef.text);
 
-  const point = row.append('div')
-    .classed('node-row-point', true)
+  const point = row.append('div').classed('node-row-point', true);
 
-  return { row, text, point, name: rowDef.name, def: rowDef }
-}
+  return { row, text, point, name: rowDef.name, def: rowDef };
+};
 
 /**
  * @param canvas {Object}    { html, svg }
@@ -45,122 +46,143 @@ const createRow = (panel, rowDef, output = false) => {
  * @return {Object}   { node, inputs, outputs, header }
  */
 const addNode = (canvas, nodeDef) => {
-  const node = canvas.html.append('div')
+  const node = canvas.html
+    .append('div')
     .classed('node', true)
     .classed(`class-${nodeDef.type}`, !!nodeDef.type)
     .style('top', `${nodeDef.position.top || 20}px`)
-    .style('left', `${nodeDef.position.left || 20}px`)
+    .style('left', `${nodeDef.position.left || 20}px`);
 
-  const header = node.append('div')
+  const header = node
+    .append('div')
     .classed('node-header', true)
-    .text(nodeDef.name)
+    .text(nodeDef.name);
 
-  const content = node.append('div').classed('node-content', true)
-  const left = content.append('div').classed('node-panel panel-left', true)
-  const right = content.append('div').classed('node-panel panel-right', true)
+  const content = node.append('div').classed('node-content', true);
+  const left = content.append('div').classed('node-panel panel-left', true);
+  const right = content.append('div').classed('node-panel panel-right', true);
 
-  const inputs = nodeDef.inputs.map(row => createRow(left, row))
-  const outputs = nodeDef.outputs.map(row => createRow(right, row, true))
+  const inputs = nodeDef.inputs.map(row => createRow(left, row));
+  const outputs = nodeDef.outputs.map(row => createRow(right, row, true));
 
-  return { node, inputs, outputs, header, definition: nodeDef }
-}
+  return { node, inputs, outputs, header, definition: nodeDef };
+};
 
 /**
  * @param nodeId {String}    id from registry
  */
 const onNodeMove = (registry, nodeId) => () => {
-  const node = registry.getNode(nodeId)
-  const {
-    top,
-    left
-  } = d3.event.subject
-  const offTop = d3.event.y - top
-  const offLeft = d3.event.x - left
+  const node = registry.getNode(nodeId);
+  const { top, left } = d3.event.subject;
+  const offTop = d3.event.y - top;
+  const offLeft = d3.event.x - left;
 
   const offsets = Array.from(node.connections)
     .map(id => registry.getConnection(id))
     .map(def => {
-      const { native: { pointFrom, pointTo, node }, to, from } = def
+      const {
+        native: { pointFrom, pointTo, node },
+        to,
+        from
+      } = def;
       return {
         def,
         node,
-        from: { id: from, offtop: pointFrom.top - top, offleft: pointFrom.left - left },
+        from: {
+          id: from,
+          offtop: pointFrom.top - top,
+          offleft: pointFrom.left - left
+        },
         to: { id: to, offtop: pointTo.top - top, offleft: pointTo.left - left },
         pointFrom,
-        pointTo,
-      }
-    })
+        pointTo
+      };
+    });
 
   d3.event.on('drag', () => {
-    const mTop = d3.event.y - offTop
-    const mLeft = d3.event.x - offLeft
+    const mTop = d3.event.y - offTop;
+    const mLeft = d3.event.x - offLeft;
 
-    node.node.style('top', `${mTop}px`).style('left', `${mLeft}px`)
+    node.node.style('top', `${mTop}px`).style('left', `${mLeft}px`);
 
     offsets.map(def => {
-      const { node, from, to, pointFrom, pointTo } = def
+      const { node, from, to, pointFrom, pointTo } = def;
 
       if (to.id === nodeId) {
-        node.attr('d', makeLine([
-          pointFrom,
-          { top: pointFrom.top, left: pointFrom.left + LINE_GROW_OFFSET },
-          { top: mTop + to.offtop, left: mLeft + to.offleft - LINE_GROW_OFFSET },
-          { top: mTop + to.offtop, left: mLeft + to.offleft },
-        ]))
+        node.attr(
+          'd',
+          makeLine([
+            pointFrom,
+            { top: pointFrom.top, left: pointFrom.left + LINE_GROW_OFFSET },
+            {
+              top: mTop + to.offtop,
+              left: mLeft + to.offleft - LINE_GROW_OFFSET
+            },
+            { top: mTop + to.offtop, left: mLeft + to.offleft }
+          ])
+        );
 
-        def.def.native.pointTo.top = mTop + to.offtop
-        def.def.native.pointTo.left = mLeft + to.offleft
-        return def
+        def.def.native.pointTo.top = mTop + to.offtop;
+        def.def.native.pointTo.left = mLeft + to.offleft;
+        return def;
       }
 
       if (from.id === nodeId) {
-        node.attr('d', makeLine([
-          { top: mTop + from.offtop, left: mLeft + from.offleft },
-          { top: mTop + from.offtop, left: mLeft + from.offleft + LINE_GROW_OFFSET },
-          { top: pointTo.top, left: pointTo.left - LINE_GROW_OFFSET },
-          pointTo,
-        ]))
+        node.attr(
+          'd',
+          makeLine([
+            { top: mTop + from.offtop, left: mLeft + from.offleft },
+            {
+              top: mTop + from.offtop,
+              left: mLeft + from.offleft + LINE_GROW_OFFSET
+            },
+            { top: pointTo.top, left: pointTo.left - LINE_GROW_OFFSET },
+            pointTo
+          ])
+        );
 
-        def.def.native.pointFrom.top = mTop + from.offtop
-        def.def.native.pointFrom.left = mLeft + from.offleft
+        def.def.native.pointFrom.top = mTop + from.offtop;
+        def.def.native.pointFrom.left = mLeft + from.offleft;
       }
-    })
-  })
+    });
+  });
 
   d3.event.on('end', () => {
     offsets.forEach(ee => {
-      registry.setConnection(ee.def.id, ee.def)
-    })
-  })
-}
+      registry.setConnection(ee.def.id, ee.def);
+    });
+  });
+};
 
 const addMoveHandler = (canvas, registry, node) =>
   node.header.call(
-    d3.drag()
-    .subject(() => ({
-      top: parseInt(node.node.style('top'), 10),
-      left: parseInt(node.node.style('left'), 10),
-    }))
-    .container(() => canvas.html.node())
-    .filter(() => d3.event.target == node.header.node())
-    .on('start', onNodeMove(registry, node.id))
-  )
+    d3
+      .drag()
+      .subject(() => ({
+        top: parseInt(node.node.style('top'), 10),
+        left: parseInt(node.node.style('left'), 10)
+      }))
+      .container(() => canvas.html.node())
+      .filter(() => d3.event.target == node.header.node())
+      .on('start', onNodeMove(registry, node.id))
+  );
 
 const getCenterOfPoint = point => {
-  const { top, left, width, height } = point.node().getBoundingClientRect()
+  const { top, left, width, height } = point.node().getBoundingClientRect();
 
   return {
-    top: top + (height / 2),
-    left: left + (width / 2),
-  }
-}
+    top: top + height / 2,
+    left: left + width / 2
+  };
+};
 
-const makeLine = d3.line()
+const makeLine = d3
+  .line()
   .x(d => d.left)
   .y(d => d.top)
-  .curve(d3.curveCatmullRom.alpha(.8))
+  .curve(d3.curveCatmullRom.alpha(0.8));
 
-const LINE_GROW_OFFSET = 20
+const LINE_GROW_OFFSET = 20;
 
 /**
  * @param canvas {Object}   { html, svg }
@@ -168,72 +190,77 @@ const LINE_GROW_OFFSET = 20
  * @return {Object}
  */
 const createConnection = (canvas, { from, output, to, input }) => {
-  const inlet = to.inputs.filter(put => put.name === input)[0]
-  const outlet = from.outputs.filter(put => put.name === output)[0]
+  const inlet = to.inputs.filter(put => put.name === input)[0];
+  const outlet = from.outputs.filter(put => put.name === output)[0];
 
-  if (!inlet)
-    throw new Error(`Inlet "${input}" not found!`)
-  if (!outlet)
-    throw new Error(`Outlet "${output}" not found!`)
+  if (!inlet) throw new Error(`Inlet "${input}" not found!`);
+  if (!outlet) throw new Error(`Outlet "${output}" not found!`);
 
-  const centerTo = getCenterOfPoint(inlet.point)
-  const centerFrom = getCenterOfPoint(outlet.point)
+  const centerTo = getCenterOfPoint(inlet.point);
+  const centerFrom = getCenterOfPoint(outlet.point);
 
-  const node = canvas.svg.append('path')
-    .attr('d', makeLine([
-      centerFrom,
-      { top: centerFrom.top, left: centerFrom.left + LINE_GROW_OFFSET },
-      { top: centerTo.top, left: centerTo.left - LINE_GROW_OFFSET },
-      centerTo,
-    ]))
+  const node = canvas.svg
+    .append('path')
+    .attr(
+      'd',
+      makeLine([
+        centerFrom,
+        { top: centerFrom.top, left: centerFrom.left + LINE_GROW_OFFSET },
+        { top: centerTo.top, left: centerTo.left - LINE_GROW_OFFSET },
+        centerTo
+      ])
+    );
 
-  const connection = { node, inlet, outlet, pointFrom: centerFrom, pointTo: centerTo }
-  inlet.connection = connection
-  outlet.connection = connection
+  const connection = {
+    node,
+    inlet,
+    outlet,
+    pointFrom: centerFrom,
+    pointTo: centerTo
+  };
+  inlet.connection = connection;
+  outlet.connection = connection;
 
-  return connection
-}
+  return connection;
+};
 
-const createId = i =>
-  ((i * 1e14 + Date.now()) * Math.pow(36, 10)).toString(36)
-
+const createId = i => ((i * 1e14 + Date.now()) * Math.pow(36, 10)).toString(36);
 
 class Registry {
   constructor(canvas) {
-    this.canvas = canvas
-    this.nodes = new Map()
-    this.connections = new Map()
-    this.lastId = 0
+    this.canvas = canvas;
+    this.nodes = new Map();
+    this.connections = new Map();
+    this.lastId = 0;
   }
 
   addNode(scheme) {
-    const id = createId(++this.lastId)
+    const id = createId(++this.lastId);
 
-    const node = addNode(this.canvas, scheme)
-    node.id = id
-    node.connections = new Set()
+    const node = addNode(this.canvas, scheme);
+    node.id = id;
+    node.connections = new Set();
 
-    addMoveHandler(this.canvas, this, node)
+    addMoveHandler(this.canvas, this, node);
 
-    this.nodes.set(id, node)
-    return node
+    this.nodes.set(id, node);
+    return node;
   }
 
   getNode(id) {
-    return this.nodes.get(id)
+    return this.nodes.get(id);
   }
 
-
   dropNode(id) {
-    const node = this.nodes.get(id)
+    const node = this.nodes.get(id);
 
     for (const cId of node.connections) {
-      this.disconnect(cId)
+      this.disconnect(cId);
     }
 
-    this.nodes.delete(id)
+    this.nodes.delete(id);
 
-    return { node, connections }
+    return { node, connections };
   }
 
   /**
@@ -241,19 +268,19 @@ class Registry {
    * @param to {String}       id of node
    */
   disconnect(connectionId) {
-    const connection = this.connections.get(connectionId)
-    const fromNode = this.nodes.get(connection.from)
-    const toNode = this.nodes.get(connection.to)
+    const connection = this.connections.get(connectionId);
+    const fromNode = this.nodes.get(connection.from);
+    const toNode = this.nodes.get(connection.to);
 
-    fromNode.connections.delete(connectionId)
-    fromNode.connections.delete(connectionId)
+    fromNode.connections.delete(connectionId);
+    fromNode.connections.delete(connectionId);
 
     // delete node in svg
     // connection.native.node.delete()
 
-    this.nodes.set(connection.from, fromNode)
-    this.nodes.set(connection.to, toNode)
-    this.connections.delete(connectionId)
+    this.nodes.set(connection.from, fromNode);
+    this.nodes.set(connection.to, toNode);
+    this.connections.delete(connectionId);
   }
 
   /**
@@ -263,64 +290,71 @@ class Registry {
    * @param input {String}    name of input
    */
   connect({ from, output, to, input }) {
-    const fromNode = this.nodes.get(from)
-    const toNode = this.nodes.get(to)
-    const id = createId(++this.lastId)
+    const fromNode = this.nodes.get(from);
+    const toNode = this.nodes.get(to);
+    const id = createId(++this.lastId);
 
-    const native = createConnection(
-      this.canvas,
-      { from: fromNode, output, to: toNode, input }
-    )
+    const native = createConnection(this.canvas, {
+      from: fromNode,
+      output,
+      to: toNode,
+      input
+    });
 
-    const connection = { id, native, from, output, to, input }
+    const connection = { id, native, from, output, to, input };
 
-    fromNode.connections.add(id)
-    toNode.connections.add(id)
+    fromNode.connections.add(id);
+    toNode.connections.add(id);
 
-    this.connections.set(id, connection)
-    this.nodes.set(from, fromNode)
-    this.nodes.set(to, toNode)
+    this.connections.set(id, connection);
+    this.nodes.set(from, fromNode);
+    this.nodes.set(to, toNode);
 
-    return connection
+    return connection;
   }
 
   getConnection(id) {
-    return this.connections.get(id)
+    return this.connections.get(id);
   }
 
   setConnection(id, connection) {
-    this.connections.set(id, connection)
+    this.connections.set(id, connection);
   }
 }
 
 // =======================================================================================
 
-const canvas = createCanvas()
-updateCanvasSize(canvas)
-window.addEventListener('resize', () => updateCanvasSize(canvas))
+const canvas = createCanvas();
+updateCanvasSize(canvas);
+window.addEventListener('resize', () => updateCanvasSize(canvas));
 
-const registry = new Registry(canvas)
+const registry = new Registry(canvas);
 
 const example_manyNodes = () => {
   const node = registry.addNode({
     name: 'Horizontal interactor',
     position: {
       top: 50,
-      left: 600,
+      left: 600
     },
     type: 'function',
-    inputs: [{
-      name: 'initial_value',
-      text: 'Initial value',
-    }, {
-      name: 'contextual_resolver',
-      text: 'Contextual resolver',
-    }],
-    outputs: [{
-      name: 'splitted_value',
-      text: 'Splitted value',
-    }],
-  })
+    inputs: [
+      {
+        name: 'initial_value',
+        text: 'Initial value'
+      },
+      {
+        name: 'contextual_resolver',
+        text: 'Contextual resolver'
+      }
+    ],
+    outputs: [
+      {
+        name: 'splitted_value',
+        text: 'Splitted value'
+      }
+    ]
+  });
 
   const node2 = registry.addNode({
     name: 'OnComponentBeginOverlap (Trigger Volume)',
@@ -330,17 +364,21 @@ const example_manyNodes = () => {
     },
     type: 'event',
     inputs: [],
-    outputs: [{
-      name: 'other_actor',
-      text: 'Other Actor',
-    }, {
-      name: 'other_comp',
-      text: 'Other Comp',
-    }, {
-      name: 'other_body_index',
-      text: 'Other Body Index',
-    }],
-  })
+    outputs: [
+      {
+        name: 'other_actor',
+        text: 'Other Actor'
+      },
+      {
+        name: 'other_comp',
+        text: 'Other Comp'
+      },
+      {
+        name: 'other_body_index',
+        text: 'Other Body Index'
+      }
+    ]
+  });
 
   const node3 = registry.addNode({
     name: 'Make Vector',
@@ -349,76 +387,123 @@ const example_manyNodes = () => {
       left: 330
     },
     type: 'expression',
-    inputs: [{
-      name: 'x',
-      text: 'X',
-    }, {
-      name: 'y',
-      text: 'Y',
-    }, {
-      name: 'z',
-      text: 'Z',
-    }],
-    outputs: [{
-      name: 'return_value',
-      text: 'Return Value',
-    }],
-  })
+    inputs: [
+      {
+        name: 'x',
+        text: 'X'
+      },
+      {
+        name: 'y',
+        text: 'Y'
+      },
+      {
+        name: 'z',
+        text: 'Z'
+      }
+    ],
+    outputs: [
+      {
+        name: 'return_value',
+        text: 'Return Value'
+      }
+    ]
+  });
 
   const nodeS = registry.addNode({
     name: 'Split',
     position: {
       top: 190,
-      left: 50,
+      left: 50
     },
     inputs: [{ name: 'input', text: 'Input' }],
     outputs: [
       { name: 'first', text: 'First Index' },
-      { name: 'second', text: 'Second Index' },
+      { name: 'second', text: 'Second Index' }
     ]
-  })
-
+  });
 
   const conn1 = registry.connect({
-    from: node2.id, output: 'other_body_index',
-    to: node3.id, input: 'x',
-  })
+    from: node2.id,
+    output: 'other_body_index',
+    to: node3.id,
+    input: 'x'
+  });
 
   const conn2 = registry.connect({
-    from: node3.id, output: 'return_value',
-    to: node.id, input: 'contextual_resolver',
-  })
+    from: node3.id,
+    output: 'return_value',
+    to: node.id,
+    input: 'contextual_resolver'
+  });
 
   const conn3 = registry.connect({
-    from: node2.id, output: 'other_actor',
-    to: node.id, input: 'initial_value',
-  })
+    from: node2.id,
+    output: 'other_actor',
+    to: node.id,
+    input: 'initial_value'
+  });
 
   const conn4 = registry.connect({
-    from: node2.id, output: 'other_comp',
-    to: nodeS.id, input: 'input',
-  })
+    from: node2.id,
+    output: 'other_comp',
+    to: nodeS.id,
+    input: 'input'
+  });
 
   const conn5 = registry.connect({
-    from: nodeS.id, output: 'first',
-    to: node3.id, input: 'z',
-  })
+    from: nodeS.id,
+    output: 'first',
+    to: node3.id,
+    input: 'z'
+  });
 
   const conn6 = registry.connect({
-    from: nodeS.id, output: 'second',
-    to: node3.id, input: 'y',
-  })
-}
-
+    from: nodeS.id,
+    output: 'second',
+    to: node3.id,
+    input: 'y'
+  });
+};
 
 const example_arrayPush = () => {
-  const AddToArray = registry.addNode({ name: 'Add To Array', position: {top:20, left:500}, type: 'function', inputs: [{text:'Target Array', name:'array'}, { text: '[0]: 3', name: '0' }], outputs: [] })
-  const DefineArray = registry.addNode({ name: 'Define Array', position: { top: 20, left: 20 }, type: 'expression', inputs: [{ text: '[0]: 1', name: '0' }, { text: '[1]: 2', name: '1' }], outputs: [{ name: 'array', text: 'Array' }] })
-  const SetVarArray = registry.addNode({ name: 'Set (My Array)', position: {top:65, left:240}, type: 'setter', inputs: [{ text: 'My Array', name: 'new_value' }], outputs: [{ text: 'My Array', name: 'value' }] })
+  const AddToArray = registry.addNode({
+    name: 'Add To Array',
+    position: { top: 20, left: 500 },
+    type: 'function',
+    inputs: [
+      { text: 'Target Array', name: 'array' },
+      { text: '[0]: 3', name: '0' }
+    ],
+    outputs: []
+  });
+  const DefineArray = registry.addNode({
+    name: 'Define Array',
+    position: { top: 20, left: 20 },
+    type: 'expression',
+    inputs: [{ text: '[0]: 1', name: '0' }, { text: '[1]: 2', name: '1' }],
+    outputs: [{ name: 'array', text: 'Array' }]
+  });
+  const SetVarArray = registry.addNode({
+    name: 'Set (My Array)',
+    position: { top: 65, left: 240 },
+    type: 'setter',
+    inputs: [{ text: 'My Array', name: 'new_value' }],
+    outputs: [{ text: 'My Array', name: 'value' }]
+  });
 
-  registry.connect({ from: DefineArray.id, output: 'array', to: SetVarArray.id, input: 'new_value'})
-  registry.connect({ from: SetVarArray.id, output: 'value', to: AddToArray.id, input: 'array'})
-}
+  registry.connect({
+    from: DefineArray.id,
+    output: 'array',
+    to: SetVarArray.id,
+    input: 'new_value'
+  });
+  registry.connect({
+    from: SetVarArray.id,
+    output: 'value',
+    to: AddToArray.id,
+    input: 'array'
+  });
+};
 
 const example_setter_getter = () => {
   const getv = registry.addNode({
@@ -429,11 +514,13 @@ const example_setter_getter = () => {
     },
     type: 'getter',
     inputs: [],
-    outputs: [{
-      name: 'value',
-      text: 'Inside Variable'
-    }],
-  })
+    outputs: [
+      {
+        name: 'value',
+        text: 'Inside Variable'
+      }
+    ]
+  });
 
   const setv = registry.addNode({
     name: 'Set (Inside Variable)',
@@ -442,16 +529,168 @@ const example_setter_getter = () => {
       left: 200
     },
     type: 'setter',
+    inputs: [
+      {
+        name: 'new_value',
+        text: 'New value'
+      }
+    ],
+    outputs: [
+      {
+        name: 'value',
+        text: 'Inside Variable'
+      }
+    ]
+  });
+};
+
+const example_effector1 = () => {
+  const $jack = registry.addNode({
+    name: 'Store: user',
+    type: 'store',
+    position: {
+      top: 20,
+      left: 20
+    },
+    inputs: [],
+    outputs: [{ name: 'value', text: 'Value: "jack"' }]
+  });
+
+  const $valid = registry.addNode({
+    name: 'Store: valid',
+    type: 'store',
+    position: {
+      top: 100,
+      left: 200
+    },
     inputs: [{
-      name: 'new_value',
-      text: 'New value',
+      name: 'mapped', text: 'Map: fn()',
     }],
-    outputs: [{
-      name: 'value',
-      text: 'Inside Variable',
-    }],
+    outputs: [{ name: 'value', text: 'Value: true' }]
+  });
+
+  const $form = registry.addNode({
+    name: 'Store: form',
+    type: 'store',
+    position: {
+      top: 20,
+      left: 500,
+    },
+    inputs: [
+      { name: 'combined_0', text: 'Combined: 0' },
+      { name: 'combined_1', text: 'Combined: 1' },
+    ],
+    outputs: [
+      { name: 'value', text: 'Value: {user: "jack", valid: true}' },
+      { name: 'watcher', text: 'Watch value' },
+    ],
   })
-}
+
+  const watcher = registry.addNode({
+    name: 'Function: watcher',
+    type: 'function',
+    position: {
+      top: 60,
+      left: 900,
+    },
+    inputs: [
+      { name: 'argument_0', text: 'Argument' },
+    ],
+    outputs: [],
+  })
+
+  const submit = registry.addNode({
+    name: 'Event: submit',
+    type: 'event',
+    position: {
+      top: 180,
+      left: 300,
+    },
+    inputs: [],
+    outputs: [
+      { name: 'triggered', text: 'Triggered' },
+    ],
+  })
+
+  const sampler = registry.addNode({
+    name: 'Sampler',
+    type: 'extend',
+    position: {
+      top: 180,
+      left: 700,
+    },
+    inputs: [
+      { name: 'source', text: 'Source' },
+      { name: 'clock', text: 'Clock' },
+      { name: 'greedy', text: 'Greedy: false' },
+    ],
+    outputs: [
+      { name: 'event', text: 'Event' },
+    ],
+  })
+
+  const sendForm = registry.addNode({
+    name: 'Event: sendForm',
+    type: 'event',
+    position: {
+      top: 40,
+      left: 1100,
+    },
+    inputs: [
+      { name: 'argument', text: 'Argument' },
+    ],
+    outputs: [],
+  })
+
+  registry.connect({
+    from: $jack.id,
+    output: 'value',
+    to: $valid.id,
+    input: 'mapped'
+  });
+
+  registry.connect({
+    from: $jack.id,
+    output: 'value',
+    to: $form.id,
+    input: 'combined_0',
+  })
+  registry.connect({
+    from: $valid.id,
+    output: 'value',
+    to: $form.id,
+    input: 'combined_1',
+  })
+
+  registry.connect({
+    from: $form.id,
+    output: 'watcher',
+    to: watcher.id,
+    input: 'argument_0'
+  })
+
+  registry.connect({
+    from: $form.id,
+    output: 'value',
+    to: sampler.id,
+    input: 'source',
+  })
+  registry.connect({
+    from: submit.id,
+    output: 'triggered',
+    to: sampler.id,
+    input: 'clock',
+  })
+
+  registry.connect({
+    from: sampler.id,
+    output: 'event',
+    to: sendForm.id,
+    input: 'argument',
+  })
+};
+
+example_effector1();
 
 /*
 
